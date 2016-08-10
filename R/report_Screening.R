@@ -65,11 +65,16 @@ report_Screening <- function(files, meta = NULL, settings = NULL, delim) {
 
     center_field <- as.numeric(spectra[[i]]$parameter[grepl("HCF", spectra[[i]]$parameter[,1]), 2])
     sweep_width <- as.numeric(spectra[[i]]$parameter[grepl("HSW", spectra[[i]]$parameter[,1]), 2])
-    header <- paste0(as.roman(i), ": ", center_field, " +/- ", sweep_width, " G", " {.unnumbered}")
+
+    if (length(center_field) != 0 && length(sweep_width) != 0)
+      header <- paste0(as.roman(i), ": ", center_field, " +/- ", sweep_width, " G", " {.unnumbered}")
+    else
+      header <- paste0("-", as.roman(i), "- {.unnumbered}")
 
     # sub-header
     .section(3, header, delim = delim)
 
+    # cat(pander::pander(spectra[[i]]$parameter))
     plot(spectra[[i]], mtext = "")
   }
 
