@@ -60,7 +60,7 @@ report_Screening <- function(files, meta = NULL, settings = NULL, delim) {
   report_Settings(settings)
 
   # Screening loop
-  .header(2, "Sceenings")
+  .section(2, "Sceenings", delim = delim)
   for (i in 1:length(spectra)) {
 
     center_field <- as.numeric(spectra[[i]]$parameter[grepl("HCF", spectra[[i]]$parameter[,1]), 2])
@@ -72,9 +72,11 @@ report_Screening <- function(files, meta = NULL, settings = NULL, delim) {
       header <- paste0("-", as.roman(i), "- {.unnumbered}")
 
     # sub-header
-    .section(3, header, delim = delim)
+    if (i == 1)
+      .header(3, header)
+    else
+      .section(3, header, delim = delim)
 
-    # cat(pander::pander(spectra[[i]]$parameter))
     plot(spectra[[i]], mtext = "")
   }
 
