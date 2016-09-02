@@ -7,7 +7,7 @@
 \usage{
 report_Settings(x = .settings())
 
-.settings(device = c("Bruker ESP300-E", "Bruker ELEXYS 500")[1],
+.settings(device = c("Bruker ESP300-E", "Bruker ELEXSYS 500")[1],
   mod_amp = NA, receiver_gain = NA, freq = NA, conv_time = NA,
   time_const = NA, sweep_time = NA, power = NA, center_field = NA,
   sweep_width = NA, scans = NA, file = NA)
