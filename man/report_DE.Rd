@@ -4,12 +4,21 @@
 \alias{report_DE}
 \title{Insert a Equivalent Dose Calculation Section}
 \usage{
-report_DE(files, natural = c(1, 2), dose, meta = NULL, settings = NULL,
-  sample.weight, interval, model = "EXP", delim = "\\\\newpage")
+report_DE(files, title = "Equivalent dose estimation", title.suffix = "",
+  natural = c(1, 2), dose, meta = NULL, settings = NULL,
+  sample.weight = NULL, interval, model = "EXP", amplitudes = NULL,
+  spike = NULL, delim = "\\\\newpage", ...)
 }
 \arguments{
 \item{files}{\code{\link{character}} \bold{(required)}:
 file path or directory where the spectra files are stored.}
+
+\item{title}{\code{\link{character}} (optional):
+Main title of the section (defaults to 'Equivalent dose estimation').}
+
+\item{title.suffix}{\code{\link{character}} (optional):
+Optional text to appear in brackets after the title. Useful if the report
+contains multiple DE measurements.}
 
 \item{natural}{\code{\link{numeric}} (optional):}
 
@@ -35,9 +44,20 @@ A vector of length two specifying the range of x-values where peaks are searched
 \item{model}{\code{\link{character}} \bold{(required)}:
 Currently implemented models: single-saturating exponential ("EXP"), linear ("LIN").}
 
+\item{amplitudes}{\code{\link{numeric}} (optional):
+A numeric vector of signal amplitudes. If provided, automatic peak finding and
+amplitude calculation is skipped.}
+
+\item{spike}{\code{\link{character}} (optional):
+Path to a single file of a spike ESR spectrum. The amplitude of the spike
+signal will be subtracted from all other amplitudes.}
+
 \item{delim}{\code{\link{character}} \bold{(required)}: Keyword specifying
 the delimiter insterted before the section. Usually \code{"<br>"} or \code{"<hr>"}
 for HTML and \code{"\\\\newpage"} for PDF reports.}
+
+\item{...}{further arguments passed to \code{\link[ESR]{fit_DRC}} and
+\code{\link[ESR]{calc_DePlateau}}.}
 }
 \value{
 Text output via \code{\link{cat}}.

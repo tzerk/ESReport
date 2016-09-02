@@ -7,6 +7,13 @@
 #' @param files \code{\link{character}} \bold{(required)}:
 #' file path or directory where the spectra files are stored.
 #'
+#' @param title \code{\link{character}} (optional):
+#' Main title of the section (defaults to 'Equivalent dose estimation').
+#'
+#' @param title.suffix \code{\link{character}} (optional):
+#' Optional text to appear in brackets after the title. Useful if the report
+#' contains multiple DE measurements.
+#'
 #' @param natural \code{\link{numeric}} (optional):
 #'
 #' @param dose \code{\link{character}} or \code{\link{numeric}} \bold{(required)}:
@@ -31,9 +38,20 @@
 #' @param model \code{\link{character}} \bold{(required)}:
 #' Currently implemented models: single-saturating exponential ("EXP"), linear ("LIN").
 #'
+#' @param amplitudes \code{\link{numeric}} (optional):
+#' A numeric vector of signal amplitudes. If provided, automatic peak finding and
+#' amplitude calculation is skipped.
+#'
+#' @param spike \code{\link{character}} (optional):
+#' Path to a single file of a spike ESR spectrum. The amplitude of the spike
+#' signal will be subtracted from all other amplitudes.
+#'
 #' @param delim \code{\link{character}} \bold{(required)}: Keyword specifying
 #' the delimiter insterted before the section. Usually \code{"<br>"} or \code{"<hr>"}
 #' for HTML and \code{"\\\\newpage"} for PDF reports.
+#'
+#' @param ... further arguments passed to \code{\link[ESR]{fit_DRC}} and
+#' \code{\link[ESR]{calc_DePlateau}}.
 #'
 #' @return
 #'
@@ -44,31 +62,65 @@
 #' # not available yet
 #'
 #' @export
-report_DE <- function(files, natural = c(1, 2), dose, meta = NULL, settings = NULL, sample.weight, interval, model = "EXP", delim = "\\newpage") {
+report_DE <- function(files, title = "Equivalent dose estimation", title.suffix = "",
+                      natural = c(1, 2), dose, meta = NULL, settings = NULL,
+                      sample.weight = NULL, interval, model = "EXP", amplitudes = NULL,
+                      spike = NULL, delim = "\\newpage", ...) {
 
   ## Read files to R
   spectra <- ESR::read_Spectrum(files, verbose = FALSE)
   dose <- as.numeric(unlist(read.delim(dose, header = FALSE)))
-  sample.weight <- as.numeric(unlist(read.delim(sample.weight, header = FALSE)))
+  if (!is.null(sample.weight))
+    sample.weight <- as.numeric(unlist(read.delim(sample.weight, header = FALSE)))
+  else
+    sample.weight <- rep(1, length(dose))
+
+  if (!is.null(spike)) {
+    spike <- ESR::read_Spectrum(spike, verbose = FALSE)
+
+    # Amplitude of the actual spike
+    peaks <- data.frame(subsample = "spike", min = NA, max = NA, amp = NA)
+
+    p <- as.data.frame(spike[[1]]$get_peaks(interval = interval))
+    spike.p <- p[c(which.min(p[,2]), which.max(p[,2])), ]
+    peaks$min <- min(spike.p[,2])
+    peaks$max <- max(spike.p[,2])
+
+    peaks$amp <- apply(peaks[ ,2:3], MARGIN = 1, dist)
+    spike.amp <- peaks$amp
+  }
+
 
   ## Pre-calculations
   peaks <- data.frame(subsample = 1:length(spectra), min = NA, max = NA, amp = NA)
 
-  for (i in seq_along(spectra)) {
-    p <- as.data.frame(spectra[[i]]$get_peaks(interval = interval))
-    peaks[i, "min"] <- min(p[,2])
-    peaks[i, "max"] <- max(p[,2])
+  if (is.null(amplitudes)) {
+    for (i in seq_along(spectra)) {
+      p <- as.data.frame(spectra[[i]]$get_peaks(interval = interval))
+      peaks[i, "min"] <- min(p[,2])
+      peaks[i, "max"] <- max(p[,2])
+    }
+    peaks$amp <- apply(peaks[ ,2:3], MARGIN = 1, dist)
+  } else {
+    peaks$amp <- amplitudes
   }
-  peaks$amp <- apply(peaks[ ,2:3], MARGIN = 1, dist)
-  sample <- data.frame(dose = dose, amp = peaks$amp)
+
+  sample <- data.frame(dose = dose,
+                       amp = peaks$amp / sample.weight - ifelse(is.null(spike), 0, spike.amp))
   names <- sapply(spectra, function(x) x$originator)
-  sample.Table <- data.frame(aliquot = names, dose = dose, peaks[ ,2:ncol(peaks)],
-                             weight = sample.weight, amp.corr = peaks$amp / sample.weight)
+  sample.Table <- data.frame(aliquot = names,
+                             dose = dose,
+                             peaks[ ,2:ncol(peaks)],
+                             weight = ifelse(all(sample.weight == 1), "-", sample.weight),
+                             spike = ifelse(is.null(spike), "-", spike.amp),
+                             amp.corr = peaks$amp / sample.weight - ifelse(is.null(spike), 0, spike.amp))
+
   colnames(sample.Table) <- c("Aliquot", "Dose (Gy)", "min Intensity (a.u.)", "max Intensity (a.u.)",
-                              "Amplitude (a.u.)", "Sample weight (g)", "Amplitude corrected (a.u.)")
+                              "Amplitude (a.u.)", "Sample weight (g)", "Amplitude spike (a.u.)",
+                              "Amplitude corrected (a.u.)")
 
   ## Header
-  .section(1, "Equvialent dose estimation", delim = delim)
+  .section(1, paste0(title, " (", title.suffix, ")"), delim = delim)
 
   # meta information
   report_Meta(meta)
@@ -82,18 +134,27 @@ report_DE <- function(files, natural = c(1, 2), dose, meta = NULL, settings = NU
   cat("**File(s)**: `", paste(sample.Table$Aliquot[natural], collapse = ", "), "`\n\n")
   if (length(natural) > 1)
     cat("**Recycling ratio:**", format(round(peaks$amp[natural[1]] / peaks$amp[natural[2]], 2), nsmall = 2), "\n\n")
-  ESR::plot_Spectrum(spectra[natural], cex = 0.8)
+  ESR::plot_Spectrum(spectra[natural], main = "Natural signal", cex = 0.8)
+
+  # SPIKE SPECTRUM (optional) ----
+  if (!is.null(spike)) {
+    .section(2, "Spike signal spectrum", delim = delim)
+    cat("**File**: `", spike[[1]]$originator, "`\n\n")
+    cat("**Amplitude**:", spike.amp, "\n\n")
+    ESR::plot_Spectrum(spike, main = "Spike signal")
+    points(spike.p, col = "red", pch = 13)
+  }
 
   # HIGHEST DOSE ----
   .section(2, "Highest additive dose spectrum", delim = delim)
   cat("**File**: `", paste(sample.Table$Aliquot[nrow(sample.Table)], collapse = ", "), "`\n\n")
   cat("**Dose (Gy)**:", paste(sample.Table$`Dose (Gy)`[nrow(sample.Table)], collapse = ", "), "\n\n")
-  ESR::plot_Spectrum(spectra[[length(spectra)]])
+  ESR::plot_Spectrum(spectra[[length(spectra)]], main = "Highest additive dose")
 
 
   ## ALL SPECTRA ----
   .section(2, "All spectra", delim = delim)
-  ESR::plot_Spectrum(spectra, cex = 0.7)
+  ESR::plot_Spectrum(spectra, main = "", cex = 0.7)
 
   ## PEAKS USED ----
   .section(2, "Analysed signal", delim = delim)
@@ -106,6 +167,12 @@ report_DE <- function(files, natural = c(1, 2), dose, meta = NULL, settings = NU
     v <- as.numeric(spec_temp$parameter[which(spec_temp$parameter[,1]=="MF"), 2])
   if ("MWFQ" %in% spec_temp$parameter[,1])
     v <- as.numeric(spec_temp$parameter[which(spec_temp$parameter[,1]=="MWFQ"), 2])
+
+  if (grepl("e+", v)) {
+    v <- format(v, scientific = FALSE)
+  }
+  if (v >= 10)
+    v <- as.numeric(paste0(strtrim(v, 1), ".", substr(v, 2, nchar(v))))
 
   planck_const <- 6.62606957e-34 # SI: J/s
   bohr_magneton <- 9.27400968e-24 # SI: J/T
@@ -121,15 +188,15 @@ report_DE <- function(files, natural = c(1, 2), dose, meta = NULL, settings = NU
 
   ## P2P AMPLITUDES ----
   .section(2, "Signal amplitudes", delim = delim)
-  cat(pander::pander(sample.Table))
+  cat(pander::pander(sample.Table, split.cells = c(1,1,1,100,100,1,1,1)))
   # write.csv(x = sample.Table, file = "./BA26_Amplitudes_De#1.csv")
 
   ## CALC DE ----
   # settings
   fit.weights <- c("prop", "equal")
   main <- c("$D_E$ $(1/I^2)$", "$D_E$ (unweighted)")
-  main_sub <- c("Same sample weight", "Corrected by sample weight")
-  iter <- ifelse(is.null(sample.weight), 1, 2)
+  main_sub <- c("Same sample weight", "Corrected by sample weight / spike")
+  iter <- ifelse(all(sample.weight == 1) && is.null(spike), 1, 2)
 
   for (i in 1:length(fit.weights)) {
     .section(2, main[i], delim = delim)
@@ -137,7 +204,7 @@ report_DE <- function(files, natural = c(1, 2), dose, meta = NULL, settings = NU
     for (j in seq_len(iter)) {
 
       if (seq_len(iter)[j] == 2)
-        sample_temp <- sample.Table[ ,c(2, 7)]
+        sample_temp <- sample.Table[ ,c(2, 8)]
       else
         sample_temp <- sample.Table[ ,c(2, 5)]
 
@@ -155,31 +222,41 @@ report_DE <- function(files, natural = c(1, 2), dose, meta = NULL, settings = NU
         cat("\n\n$$ y = a + b * x $$")
       }
 
-      fit <- ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i], algorithm = "LM", plot = FALSE, verbose = FALSE)
+      fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
+                              algorithm = "LM", plot = FALSE, verbose = FALSE, ...))
+
+      # When EXP fitting fails revert to LIN fit
+      if (inherits(fit, "try-error") && model == "EXP") {
+        model <- "LIN"
+        fit <- ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
+                            algorithm = "LM", plot = FALSE, verbose = FALSE, ...)
+      }
 
       cat("\n\n**Equivalent dose (Gy)**:", fit$output$De, "+/-", fit$output$De.Error)
       if (model == "EXP")
         cat("\n\n**Saturation dose (Gy)**:",  fit$output$d0,"+/-", fit$output$d0.error)
       cat("\n\n**Coefficient of determination**:", round(fit$output$rsquared, 4), "\n\n")
 
-      ESR::plot_DRC(fit, cex = 0.9)
+      ESR::plot_DRC(fit, main = "", cex = 0.9)
 
       ### DRC (bootstrap) ----
       .section(4, "Bootstrapped DRC", delim = delim)
-      fit <- ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i], algorithm = "LM", plot = FALSE, verbose = FALSE,
-                   bootstrap = TRUE)
+      fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
+                              algorithm = "LM", plot = FALSE, verbose = FALSE,
+                              bootstrap = TRUE, ...))
 
       cat("\n\n**Equivalent dose (Gy)**:", fit$output$De, "+/-", fit$output$De.Error)
       if (model == "EXP")
         cat("\n\n**Saturation dose (Gy)**:",  fit$output$d0,"+/-", fit$output$d0.error)
       cat("\n\n")
 
-      ESR::plot_DRC(fit, cex = 0.9)
+      ESR::plot_DRC(fit, main = "", cex = 0.9)
 
       ### DE-DEmax plot ----
       .section(4, "$D_E-D_{E,max}$ plot", delim = delim)
-      demax_inverse <- ESR::calc_DePlateau(sample_temp, fit.weights = fit.weights[i], output.console = FALSE, cex = 0.9, show.grid = TRUE,
-                                           line = 0, mar = c(5, 6, 4, 4) + 0.1)
+      demax_inverse <- ESR::calc_DePlateau(sample_temp, fit.weights = fit.weights[i], model = model,
+                                           output.console = FALSE, cex = 0.9, show.grid = TRUE,
+                                           line = 0, mar = c(5, 6, 4, 4) + 0.1, ...)
 
       ### DE-DEmax numeric ----
       .section(4, "$D_E-D_{E,max}$ numeric results", delim = delim)
