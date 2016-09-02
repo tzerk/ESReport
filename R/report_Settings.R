@@ -40,7 +40,7 @@ report_Settings <- function(x = .settings()) {
                "Center field (G)",
                "Sweep width (G)",
                "Number of scans",
-               "File")
+               "File(s)")
 
   for (i in 1:length(entries))
     cat(paste0("+ **", entries[i], "**:"), paste(x[[i]], collapse = ", "), "\n\n")
@@ -74,7 +74,7 @@ report_Settings <- function(x = .settings()) {
 #' @rdname report_Settings
 #'
 #' @export
-.settings <- function(device = c("Bruker ESP300-E", "Bruker ELEXYS 500")[1],
+.settings <- function(device = c("Bruker ESP300-E", "Bruker ELEXSYS 500")[1],
                       mod_amp = NA, receiver_gain = NA, freq = NA, conv_time = NA,
                       time_const = NA, sweep_time = NA, power = NA, center_field = NA,
                       sweep_width = NA, scans = NA, file = NA) {
