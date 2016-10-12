@@ -159,32 +159,16 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
   ## PEAKS USED ----
   .section(2, "Analysed signal", delim = delim)
 
-  plot(spectra[[length(spectra)]]$get_gvalues(), cex = 0.9, mtext = "")
+  plot(spectra[[length(spectra)]], cex = 0.9, mtext = "")
 
   spec_temp <- spectra[[length(spectra)]]
 
-  if ("MF" %in% spec_temp$parameter[ ,1])
-    v <- as.numeric(spec_temp$parameter[which(spec_temp$parameter[,1]=="MF"), 2])
-  if ("MWFQ" %in% spec_temp$parameter[,1])
-    v <- as.numeric(spec_temp$parameter[which(spec_temp$parameter[,1]=="MWFQ"), 2])
+  peaks <- as.data.frame(ESR::find_Peaks(spec_temp$data, interval = interval))
+  peaks <- rbind(peaks[which.max(peaks$ESR.intensity), ],
+                 peaks[which.min(peaks$ESR.intensity), ])
 
-  if (grepl("e+", v)) {
-    v <- format(v, scientific = FALSE)
-  }
-  if (v >= 10)
-    v <- as.numeric(paste0(strtrim(v, 1), ".", substr(v, 2, nchar(v))))
-
-  planck_const <- 6.62606957e-34 # SI: J/s
-  bohr_magneton <- 9.27400968e-24 # SI: J/T
-  H <- interval
-  g <- (planck_const * v * 10^9) / (bohr_magneton * 10^-4 * H)
-
-  gval_peaks <- as.data.frame(ESR::find_Peaks(spec_temp$get_gvalues(), interval = g[2:1]))
-  gval_peaks <- rbind(gval_peaks[which.max(gval_peaks$ESR.intensity), ],
-                      gval_peaks[which.min(gval_peaks$ESR.intensity), ])
-
-  points(gval_peaks, pch = 16, col = "red")
-  text(gval_peaks, labels = format(gval_peaks$magnetic.field, digits = 5), pos = 4)
+  points(peaks, pch = 16, col = "red")
+  text(peaks, labels = format(peaks$magnetic.field, digits = 5), pos = 4)
 
   ## P2P AMPLITUDES ----
   .section(2, "Signal amplitudes", delim = delim)
