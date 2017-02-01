@@ -35,6 +35,9 @@
 #' @param interval \code{\link{numeric}} \bold{(required)}:
 #' A vector of length two specifying the range of x-values where peaks are searched
 #'
+#' @param th \code{\link{numeric}} (optional):
+#' An integer specifying the number of neighbouring values to compare each x-value to.
+#'
 #' @param model \code{\link{character}} \bold{(required)}:
 #' Currently implemented models: single-saturating exponential ("EXP"), linear ("LIN").
 #'
@@ -50,8 +53,8 @@
 #' the delimiter insterted before the section. Usually \code{"<br>"} or \code{"<hr>"}
 #' for HTML and \code{"\\\\newpage"} for PDF reports.
 #'
-#' @param ... further arguments passed to \code{\link[ESR]{fit_DRC}} and
-#' \code{\link[ESR]{calc_DePlateau}}.
+#' @param ... further arguments passed to \code{\link[ESR]{fit_DRC}},
+#' \code{\link[ESR]{calc_DePlateau}} and \code{\link[ESR]{read_Spectrum}}.
 #'
 #' @return
 #'
@@ -64,11 +67,11 @@
 #' @export
 report_DE <- function(files, title = "Equivalent dose estimation", title.suffix = "",
                       natural = c(1, 2), dose, meta = NULL, settings = NULL,
-                      sample.weight = NULL, interval, model = "EXP", amplitudes = NULL,
+                      sample.weight = NULL, interval, th = 10, model = "EXP", amplitudes = NULL,
                       spike = NULL, delim = "\\newpage", ...) {
 
   ## Read files to R
-  spectra <- ESR::read_Spectrum(files, verbose = FALSE)
+  spectra <- ESR::read_Spectrum(files, verbose = FALSE, ...)
   dose <- as.numeric(unlist(read.delim(dose, header = FALSE)))
   if (!is.null(sample.weight))
     sample.weight <- as.numeric(unlist(read.delim(sample.weight, header = FALSE)))
@@ -81,7 +84,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
     # Amplitude of the actual spike
     peaks <- data.frame(subsample = "spike", min = NA, max = NA, amp = NA)
 
-    p <- as.data.frame(spike[[1]]$get_peaks(interval = interval))
+    p <- as.data.frame(spike[[1]]$get_peaks(interval = interval, th = th))
     spike.p <- p[c(which.min(p[,2]), which.max(p[,2])), ]
     peaks$min <- min(spike.p[,2])
     peaks$max <- max(spike.p[,2])
@@ -96,7 +99,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
 
   if (is.null(amplitudes)) {
     for (i in seq_along(spectra)) {
-      p <- as.data.frame(spectra[[i]]$get_peaks(interval = interval))
+      p <- as.data.frame(spectra[[i]]$get_peaks(interval = interval, th = th))
       peaks[i, "min"] <- min(p[,2])
       peaks[i, "max"] <- max(p[,2])
     }
@@ -163,7 +166,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
 
   spec_temp <- spectra[[length(spectra)]]
 
-  peaks <- as.data.frame(ESR::find_Peaks(spec_temp$data, interval = interval))
+  peaks <- as.data.frame(ESR::find_Peaks(spec_temp$data, interval = interval, th = th))
   peaks <- rbind(peaks[which.max(peaks$ESR.intensity), ],
                  peaks[which.min(peaks$ESR.intensity), ])
 
@@ -256,7 +259,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
   par(mfrow = c(3, 2))
   for (i in seq_along(spectra)) {
     plot(spectra[[i]], mtext = "")
-    p <- as.data.frame(spectra[[i]]$get_peaks(interval = interval))
+    p <- as.data.frame(spectra[[i]]$get_peaks(interval = interval, th = th))
     p.min <- p[p[,2] == min(p[,2]), ]
     p.max <- p[p[,2] == max(p[,2]), ]
     points(rbind(p.min, p.max), col = "red", pch = 13)
