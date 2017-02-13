@@ -18,4 +18,3 @@ Print YAML Header to be used for producing ESR reports.
 get_yamlHeader()
 
 }
-

@@ -29,4 +29,3 @@ a code chunk and make sure to set the chunk option \code{results = 'asis'}.
 report_Comment(level = 1, text = "My comment", delim = "\\\\newpage")
 
 }
-

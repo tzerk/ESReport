@@ -12,4 +12,3 @@ Dating Applications}
 Christoph Burow (University of Cologne, Germany)
 }
 \keyword{package}
-

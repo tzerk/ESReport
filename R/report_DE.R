@@ -15,6 +15,13 @@
 #' contains multiple DE measurements.
 #'
 #' @param natural \code{\link{numeric}} (optional):
+#' Optional vector of integer values specifying which of the spectra are
+#' repeated natural dose measurements (defaults to \code{c(1, 2)}).
+#'
+#' @param natural.comment  \code{\link{character}} (optional):
+#' An optional comment on the natural dose. Defaults to the statement that
+#' repeated natural dose measurements were done first and last in the
+#' measurement series.
 #'
 #' @param dose \code{\link{character}} or \code{\link{numeric}} \bold{(required)}:
 #' Either a file path to a text file containing the irradiation doses or a numeric
@@ -66,7 +73,7 @@
 #'
 #' @export
 report_DE <- function(files, title = "Equivalent dose estimation", title.suffix = "",
-                      natural = c(1, 2), dose, meta = NULL, settings = NULL,
+                      natural = c(1, 2), natural.comment, dose, meta = NULL, settings = NULL,
                       sample.weight = NULL, interval, th = 10, model = "EXP", amplitudes = NULL,
                       spike = NULL, delim = "\\newpage", ...) {
 
@@ -135,8 +142,15 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
   ## NATURAL ----
   .section(2, "Natural signal spectrum", delim = delim)
   cat("**File(s)**: `", paste(sample.Table$Aliquot[natural], collapse = ", "), "`\n\n")
-  if (length(natural) > 1)
+  if (length(natural) > 1) {
     cat("**Recycling ratio:**", format(round(peaks$amp[natural[1]] / peaks$amp[natural[2]], 2), nsmall = 2), "\n\n")
+
+    if (missing(natural.comment))
+      natural.comment <- "Natural signal spectrum was measured first and last in the series."
+
+    cat("**Comment:**", natural.comment, "\n\n")
+  }
+
   ESR::plot_Spectrum(spectra[natural], main = "Natural signal", cex = 0.8)
 
   # SPIKE SPECTRUM (optional) ----
@@ -181,25 +195,34 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
   ## CALC DE ----
   # settings
   fit.weights <- c("prop", "equal")
-  main <- c("$D_E$ $(1/I^2)$", "$D_E$ (unweighted)")
-  main_sub <- c("Same sample weight", "Corrected by sample weight / spike")
+  main <- c("Equivalent dose $D_E$ $(1/I^2)$", "Equivalent dose $D_E$ (unweighted)")
+  main_sub <- c("Uncorrected sample weight", "Corrected by sample weight / spike")
   iter <- ifelse(all(sample.weight == 1) && is.null(spike), 1, 2)
+  main_level <- ifelse(iter == 1, 3, 4)
 
   for (i in 1:length(fit.weights)) {
     .section(2, main[i], delim = delim)
 
     for (j in seq_len(iter)) {
 
+      ## DATA PREPARATION ----
+      # Switch between uncorrected and correct amplitude values (different column)
       if (seq_len(iter)[j] == 2)
         sample_temp <- sample.Table[ ,c(2, 8)]
       else
         sample_temp <- sample.Table[ ,c(2, 5)]
 
+      # On behalf of Prof. Schellmann we remove all repeated 0-dose measurements
+      if (length(natural) != 1) {
+        sample_temp <- sample_temp[-c(natural[2:length(natural)]), ]
+      }
+
       ## SAME WEIGHT ----
-      .header(3, main_sub[j])
+      if (iter == 2)
+        .header(3, main_sub[j])
 
       ### DRC (normal) ----
-      .header(4, "Dose response curve (DRC)")
+      .header(main_level, "Dose response curve (DRC)")
       if (model == "EXP") {
         cat("**Model:** Single saturating exponential")
         cat("\n\n$$y = a(1 - e^{ - \\frac{-(x+c)}{b} })$$ ")
@@ -227,7 +250,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
       ESR::plot_DRC(fit, main = "", cex = 0.9)
 
       ### DRC (bootstrap) ----
-      .section(4, "Bootstrapped DRC", delim = delim)
+      .section(main_level, "Bootstrapped DRC", delim = delim)
       fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
                               algorithm = "LM", plot = FALSE, verbose = FALSE,
                               bootstrap = TRUE, ...))
@@ -240,13 +263,13 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
       ESR::plot_DRC(fit, main = "", cex = 0.9)
 
       ### DE-DEmax plot ----
-      .section(4, "$D_E-D_{E,max}$ plot", delim = delim)
+      .section(main_level, "$D_E-D_{E,max}$ plot", delim = delim)
       demax_inverse <- ESR::calc_DePlateau(sample_temp, fit.weights = fit.weights[i], model = model,
                                            output.console = FALSE, cex = 0.9, show.grid = TRUE,
                                            line = 0, mar = c(5, 6, 4, 4) + 0.1, ...)
 
       ### DE-DEmax numeric ----
-      .section(4, "$D_E-D_{E,max}$ numeric results", delim = delim)
+      .section(main_level, "$D_E-D_{E,max}$ numeric results", delim = delim)
       demax_inverse.Table <- setNames(demax_inverse$output, c("#", "DE (Gy)", "DE error (Gy)", "Max. Dose (Gy)"))
       cat(pander::pander(demax_inverse.Table))
       .newPage(delim)

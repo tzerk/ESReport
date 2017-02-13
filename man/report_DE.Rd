@@ -5,9 +5,9 @@
 \title{Insert a Equivalent Dose Calculation Section}
 \usage{
 report_DE(files, title = "Equivalent dose estimation", title.suffix = "",
-  natural = c(1, 2), dose, meta = NULL, settings = NULL,
-  sample.weight = NULL, interval, model = "EXP", amplitudes = NULL,
-  spike = NULL, delim = "\\\\newpage", ...)
+  natural = c(1, 2), natural.comment, dose, meta = NULL, settings = NULL,
+  sample.weight = NULL, interval, th = 10, model = "EXP",
+  amplitudes = NULL, spike = NULL, delim = "\\\\newpage", ...)
 }
 \arguments{
 \item{files}{\code{\link{character}} \bold{(required)}:
@@ -20,7 +20,14 @@ Main title of the section (defaults to 'Equivalent dose estimation').}
 Optional text to appear in brackets after the title. Useful if the report
 contains multiple DE measurements.}
 
-\item{natural}{\code{\link{numeric}} (optional):}
+\item{natural}{\code{\link{numeric}} (optional):
+Optional vector of integer values specifying which of the spectra are
+repeated natural dose measurements (defaults to \code{c(1, 2)}).}
+
+\item{natural.comment}{\code{\link{character}} (optional):
+An optional comment on the natural dose. Defaults to the statement that
+repeated natural dose measurements were done first and last in the
+measurement series.}
 
 \item{dose}{\code{\link{character}} or \code{\link{numeric}} \bold{(required)}:
 Either a file path to a text file containing the irradiation doses or a numeric
@@ -41,6 +48,9 @@ vector.}
 \item{interval}{\code{\link{numeric}} \bold{(required)}:
 A vector of length two specifying the range of x-values where peaks are searched}
 
+\item{th}{\code{\link{numeric}} (optional):
+An integer specifying the number of neighbouring values to compare each x-value to.}
+
 \item{model}{\code{\link{character}} \bold{(required)}:
 Currently implemented models: single-saturating exponential ("EXP"), linear ("LIN").}
 
@@ -56,8 +66,8 @@ signal will be subtracted from all other amplitudes.}
 the delimiter insterted before the section. Usually \code{"<br>"} or \code{"<hr>"}
 for HTML and \code{"\\\\newpage"} for PDF reports.}
 
-\item{...}{further arguments passed to \code{\link[ESR]{fit_DRC}} and
-\code{\link[ESR]{calc_DePlateau}}.}
+\item{...}{further arguments passed to \code{\link[ESR]{fit_DRC}},
+\code{\link[ESR]{calc_DePlateau}} and \code{\link[ESR]{read_Spectrum}}.}
 }
 \value{
 Text output via \code{\link{cat}}.
@@ -72,4 +82,3 @@ the chunk option \code{results = 'asis'}.
 # not available yet
 
 }
-
