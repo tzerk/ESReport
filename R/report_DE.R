@@ -154,7 +154,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
     cat("**Comment:**", natural.comment, "\n\n")
   }
 
-  ESR::plot_Spectrum(spectra[natural], main = "Natural signal", cex = 0.8)
+  ESR::plot_Spectrum(spectra[natural], main = "Natural signal", cex = 0.8, ...)
 
   # SPIKE SPECTRUM (optional) ----
   if (!is.null(spike)) {
@@ -174,7 +174,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
 
   ## ALL SPECTRA ----
   .section(2, "All spectra", delim = delim)
-  ESR::plot_Spectrum(spectra, main = "", cex = 0.7)
+  ESR::plot_Spectrum(spectra, main = "", cex = 0.7, ...)
 
   ## PEAKS USED ----
   .section(2, "Analysed signal", delim = delim)
