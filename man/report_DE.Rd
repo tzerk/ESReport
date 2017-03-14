@@ -7,7 +7,8 @@
 report_DE(files, title = "Equivalent dose estimation", title.suffix = "",
   natural = c(1, 2), natural.comment, dose, meta = NULL, settings = NULL,
   sample.weight = NULL, interval, th = 10, model = "EXP",
-  amplitudes = NULL, spike = NULL, delim = "\\\\newpage", ...)
+  amplitudes = NULL, spike = NULL, bootstrap = TRUE,
+  delim = "\\\\newpage", ...)
 }
 \arguments{
 \item{files}{\code{\link{character}} \bold{(required)}:
@@ -60,7 +61,10 @@ amplitude calculation is skipped.}
 
 \item{spike}{\code{\link{character}} (optional):
 Path to a single file of a spike ESR spectrum. The amplitude of the spike
-signal will be subtracted from all other amplitudes.}
+signal will be subtracted from all other amplitudes (default \code{TRUE}).}
+
+\item{bootstrap}{\code{\link{logical}} (optional):
+Include calculation of the equivalent dose using a bootstrap approach.}
 
 \item{delim}{\code{\link{character}} \bold{(required)}: Keyword specifying
 the delimiter insterted before the section. Usually \code{"<br>"} or \code{"<hr>"}

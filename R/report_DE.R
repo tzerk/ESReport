@@ -54,7 +54,10 @@
 #'
 #' @param spike \code{\link{character}} (optional):
 #' Path to a single file of a spike ESR spectrum. The amplitude of the spike
-#' signal will be subtracted from all other amplitudes.
+#' signal will be subtracted from all other amplitudes (default \code{TRUE}).
+#'
+#' @param bootstrap \code{\link{logical}} (optional):
+#' Include calculation of the equivalent dose using a bootstrap approach.
 #'
 #' @param delim \code{\link{character}} \bold{(required)}: Keyword specifying
 #' the delimiter insterted before the section. Usually \code{"<br>"} or \code{"<hr>"}
@@ -75,7 +78,7 @@
 report_DE <- function(files, title = "Equivalent dose estimation", title.suffix = "",
                       natural = c(1, 2), natural.comment, dose, meta = NULL, settings = NULL,
                       sample.weight = NULL, interval, th = 10, model = "EXP", amplitudes = NULL,
-                      spike = NULL, delim = "\\newpage", ...) {
+                      spike = NULL, bootstrap = TRUE, delim = "\\newpage", ...) {
 
   ## Read files to R
   spectra <- ESR::read_Spectrum(files, verbose = FALSE, ...)
@@ -250,17 +253,19 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
       ESR::plot_DRC(fit, main = "", cex = 0.9)
 
       ### DRC (bootstrap) ----
-      .section(main_level, "Bootstrapped DRC", delim = delim)
-      fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
-                              algorithm = "LM", plot = FALSE, verbose = FALSE,
-                              bootstrap = TRUE, ...))
+      if (bootstrap) {
+        .section(main_level, "Bootstrapped DRC", delim = delim)
+        fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
+                                algorithm = "LM", plot = FALSE, verbose = FALSE,
+                                bootstrap = TRUE, ...))
 
-      cat("\n\n**Equivalent dose (Gy)**:", fit$output$De, "+/-", fit$output$De.Error)
-      if (model == "EXP")
-        cat("\n\n**Saturation dose (Gy)**:",  fit$output$d0,"+/-", fit$output$d0.error)
-      cat("\n\n")
+        cat("\n\n**Equivalent dose (Gy)**:", fit$output$De, "+/-", fit$output$De.Error)
+        if (model == "EXP")
+          cat("\n\n**Saturation dose (Gy)**:",  fit$output$d0,"+/-", fit$output$d0.error)
+        cat("\n\n")
 
-      ESR::plot_DRC(fit, main = "", cex = 0.9)
+        ESR::plot_DRC(fit, main = "", cex = 0.9)
+      }
 
       ### DE-DEmax plot ----
       .section(main_level, "$D_E-D_{E,max}$ plot", delim = delim)
