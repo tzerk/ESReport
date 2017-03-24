@@ -83,10 +83,13 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
   ## Read files to R
   spectra <- ESR::read_Spectrum(files, verbose = FALSE, ...)
   dose <- as.numeric(unlist(read.delim(dose, header = FALSE)))
-  if (!is.null(sample.weight))
-    sample.weight <- as.numeric(unlist(read.delim(sample.weight, header = FALSE)))
-  else
+
+  if (!is.null(sample.weight)) {
+    if (is.character(sample.weight))
+      sample.weight <- as.numeric(unlist(read.delim(sample.weight, header = FALSE)))
+  } else {
     sample.weight <- rep(1, length(dose))
+  }
 
   if (!is.null(spike)) {
     spike <- ESR::read_Spectrum(spike, verbose = FALSE)
