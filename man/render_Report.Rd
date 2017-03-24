@@ -4,7 +4,8 @@
 \alias{render_Report}
 \title{Render R Markdown (Wrapper)}
 \usage{
-render_Report(file, output_format = c("pdf_document", "html_document"), ...)
+render_Report(file, output_format = c("pdf_document", "html_document"),
+  backup = TRUE, ...)
 }
 \arguments{
 \item{file}{\code{\link{character}} \bold{(required)}: Input file (R script, Rmd, or plain markdown).}
@@ -15,6 +16,10 @@ Pass the name of a format (e.g. "html_document") to render a single format or pa
 format names to render multiple formats. Alternatively you can pass an output format object; e.g. html_document().
 If NULL is passed then the output format is the first one defined in the YAML
 metadata of the input file (defaulting to HTML if none is specified).}
+
+\item{backup}{\code{\link{logical}} (with default):
+By default, any existing report files in the working folder are copied to a new folder
+named 'archived_reports' before overwriting the old report.}
 
 \item{...}{further arguments passed to \code{\link[rmarkdown]{render}}.}
 }

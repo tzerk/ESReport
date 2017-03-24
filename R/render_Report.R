@@ -13,6 +13,10 @@
 #' If NULL is passed then the output format is the first one defined in the YAML
 #' metadata of the input file (defaulting to HTML if none is specified).
 #'
+#' @param backup \code{\link{logical}} (with default):
+#' By default, any existing report files in the working folder are copied to a new folder
+#' named 'archived_reports' before overwriting the old report.
+#'
 #' @param ... further arguments passed to \code{\link[rmarkdown]{render}}.
 #'
 #' @return
@@ -27,8 +31,18 @@
 #' }
 #'
 #' @export
-render_Report <- function(file, output_format = c("pdf_document", "html_document"), ...) {
+render_Report <- function(file, output_format = c("pdf_document", "html_document"), backup = TRUE, ...) {
 
+
+  ## ---- Archive old report first
+  if (backup) {
+    if ("pdf_document" %in% output_format)
+      backup(file = file, type = "pdf")
+    if ("html_document" %in% output_format)
+      backup(file = file, type = "html")
+  }
+
+  ## ---- Write new file
   delim <- c("\\newpage", "<hr>")
 
   if (!is.null(output_format)) {
@@ -38,5 +52,30 @@ render_Report <- function(file, output_format = c("pdf_document", "html_document
   } else {
     knitr::knit(file)
   }
+
+}
+
+backup <- function(file, type) {
+
+  file_body <- gsub(pattern = "rmd$", replacement = "", x = file, ignore.case = TRUE, perl = TRUE)
+  file <- gsub(pattern = "rmd$", replacement = "pdf", x = file, ignore.case = TRUE, perl = TRUE)
+
+  # move file if it already exists
+  if (file.exists(file)) {
+
+    # create archive folder if necessary
+    if (!dir.exists("archived_reports"))
+      dir.create("archived_reports")
+
+
+    file.copy(from = file, to = "archived_reports/", copy.date = TRUE, overwrite = TRUE)
+
+    file.rename(from = paste0("archived_reports/", file),
+                to = paste0("archived_reports/",
+                            file_body,
+                            format(Sys.time(), "%Y-%m-%d_%H%M%S"),
+                            ".", type))
+  }
+
 
 }
