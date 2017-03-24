@@ -91,6 +91,13 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
     sample.weight <- rep(1, length(dose))
   }
 
+  # check equal lenghts of provided data
+  if (length(spectra) != length(sample.weight))
+    stop(paste("Unequal length! Spectra:", length(spectra), "Weights:", length(sample.weight)))
+  if (length(spectra) != length(dose))
+    stop(paste("Unequal length! Spectra:", length(spectra), "Dose:", length(dose)))
+
+
   if (!is.null(spike)) {
     spike <- ESR::read_Spectrum(spike, verbose = FALSE)
 
@@ -122,13 +129,25 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
   }
 
   sample <- data.frame(dose = dose,
-                       amp = peaks$amp / sample.weight - ifelse(is.null(spike), 0, spike.amp))
+                       amp = peaks$amp)
   names <- sapply(spectra, function(x) x$originator)
+
+
+  if (all(sample.weight == 1))
+    sample.weight.Table <- "-"
+  else
+    sample.weight.Table <- sample.weight
+
+  if (is.null(spike))
+    spike.amp.Table <- "-"
+  else
+    spike.amp.Table <- spike.amp
+
   sample.Table <- data.frame(aliquot = names,
                              dose = dose,
                              peaks[ ,2:ncol(peaks)],
-                             weight = ifelse(all(sample.weight == 1), "-", sample.weight),
-                             spike = ifelse(is.null(spike), "-", spike.amp),
+                             weight = sample.weight.Table,
+                             spike = spike.amp.Table,
                              amp.corr = peaks$amp / sample.weight - ifelse(is.null(spike), 0, spike.amp))
 
   colnames(sample.Table) <- c("Aliquot", "Dose (Gy)", "min Intensity (a.u.)", "max Intensity (a.u.)",
