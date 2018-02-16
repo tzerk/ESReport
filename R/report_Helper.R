@@ -33,8 +33,8 @@ NULL
 
 #' @export
 #' @rdname report_Helper
-.header <- function(level, text) cat(paste(rep("#", level), collapse = ""), text, "\n\n", sep = "")
+.header <- function(level, text) cat(paste(rep("#", level), collapse = ""), paste("", text), "\n\n", sep = "")
 
 #' @export
 #' @rdname report_Helper
-.section <- function(level, text, delim) cat(paste0("\n\n", delim,"\n\n"), paste(rep("#", level), collapse = ""), text, "\n\n", sep = "")
+.section <- function(level, text, delim) cat(paste0("\n\n", delim,"\n\n"), paste(rep("#", level), collapse = ""), paste("", text), "\n\n", sep = "")
