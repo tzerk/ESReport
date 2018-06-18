@@ -6,8 +6,8 @@
 \usage{
 report_DE(files, title = "Equivalent dose estimation", title.suffix = "",
   natural = c(1, 2), natural.comment, dose, meta = NULL, settings = NULL,
-  sample.weight = NULL, interval, th = 10, model = "EXP",
-  amplitudes = NULL, spike = NULL, bootstrap = TRUE,
+  fit.repeated = FALSE, sample.weight = NULL, interval, th = 10,
+  model = "EXP", amplitudes = NULL, spike = NULL, bootstrap = TRUE,
   delim = "\\\\newpage", ...)
 }
 \arguments{
@@ -41,6 +41,11 @@ Consider using \code{\link{.meta}} as a constructor.}
 \item{settings}{\code{\link{list}} \bold{(required)}: A named \code{list} with
 information on the following elements given in \code{\link{.settings}}.
 Consider using \code{\link{.settings}} as a constructor.}
+
+\item{fit.repeated}{\code{\link{logical}} (optional):
+Whether a repeated zero-dose measurement should be considered
+for fitting or not. If `TRUE` all repeated zero-dose measurements (indicated by
+argument `natural`) are removed from the data set before fitting.}
 
 \item{sample.weight}{\code{\link{character}} or \code{\link{numeric}} (optional):
 Either a file path to a text file containing the sample weights or a numeric

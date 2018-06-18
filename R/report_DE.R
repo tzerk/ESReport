@@ -35,6 +35,11 @@
 #' information on the following elements given in \code{\link{.settings}}.
 #' Consider using \code{\link{.settings}} as a constructor.
 #'
+#' @param fit.repeated \code{\link{logical}} (optional):
+#' Whether a repeated zero-dose measurement should be considered
+#' for fitting or not. If `TRUE` all repeated zero-dose measurements (indicated by
+#' argument `natural`) are removed from the data set before fitting.
+#'
 #' @param sample.weight \code{\link{character}} or \code{\link{numeric}} (optional):
 #' Either a file path to a text file containing the sample weights or a numeric
 #' vector.
@@ -70,6 +75,8 @@
 #'
 #' Text output via \code{\link{cat}}.
 #'
+#' A [list] with all intermediate and final results useful for debugging.
+#'
 #' @examples
 #'
 #' # not available yet
@@ -77,18 +84,22 @@
 #' @export
 report_DE <- function(files, title = "Equivalent dose estimation", title.suffix = "",
                       natural = c(1, 2), natural.comment, dose, meta = NULL, settings = NULL,
+                      fit.repeated = FALSE,
                       sample.weight = NULL, interval, th = 10, model = "EXP", amplitudes = NULL,
                       spike = NULL, bootstrap = TRUE, delim = "\\newpage", ...) {
 
+  ## Ouput object
+  out <- list()
+
   ## Read files to R
-  spectra <- ESR::read_Spectrum(files, verbose = FALSE, ...)
-  dose <- as.numeric(unlist(read.delim(dose, header = FALSE)))
+  spectra <- out$spectra <- ESR::read_Spectrum(files, verbose = FALSE, ...)
+  dose <- out$spectra <- as.numeric(unlist(read.delim(dose, header = FALSE)))
 
   if (!is.null(sample.weight)) {
     if (is.character(sample.weight))
-      sample.weight <- as.numeric(unlist(read.delim(sample.weight, header = FALSE)))
+      sample.weight <- out$sample.weight <- as.numeric(unlist(read.delim(sample.weight, header = FALSE)))
   } else {
-    sample.weight <- rep(1, length(dose))
+    sample.weight <- out$sample.weight <- rep(1, length(dose))
   }
 
   # check equal lenghts of provided data
@@ -99,7 +110,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
 
 
   if (!is.null(spike)) {
-    spike <- ESR::read_Spectrum(spike, verbose = FALSE)
+    spike <- out$spike <- ESR::read_Spectrum(spike, verbose = FALSE)
 
     # Amplitude of the actual spike
     peaks <- data.frame(subsample = "spike", min = NA, max = NA, amp = NA)
@@ -128,10 +139,14 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
     peaks$amp <- amplitudes
   }
 
+  out$peaks <- peaks
+  out$amplitudes <- amplitudes
+
   sample <- data.frame(dose = dose,
                        amp = peaks$amp)
   names <- sapply(spectra, function(x) x$originator)
 
+  out$sample <- sample
 
   if (all(sample.weight == 1))
     sample.weight.Table <- "-"
@@ -154,6 +169,8 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
                               "Amplitude (a.u.)", "Sample weight (g)", "Amplitude spike (a.u.)",
                               "Amplitude corrected (a.u.)")
 
+  out$sample.Table <- sample.Table
+
   ## Header
   .section(1, paste0(title, " (", title.suffix, ")"), delim = delim)
 
@@ -168,12 +185,15 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
   .section(2, "Natural signal spectrum", delim = delim)
   cat("**File(s)**: `", paste(sample.Table$Aliquot[natural], collapse = ", "), "`\n\n")
   if (length(natural) > 1) {
-    cat("**Recycling ratio:**", format(round(peaks$amp[natural[1]] / peaks$amp[natural[2]], 2), nsmall = 2), "\n\n")
+    recycling.ratio <- out$recycling.ratio <- peaks$amp[natural[1]] / peaks$amp[natural[2]]
+
+    cat("**Recycling ratio:**", format(round(recycling.ratio, 2), nsmall = 2), "\n\n")
 
     if (missing(natural.comment))
       natural.comment <- "Natural signal spectrum was measured first and last in the series."
 
     cat("**Comment:**", natural.comment, "\n\n")
+
   }
 
   ESR::plot_Spectrum(spectra[natural], main = "Natural signal", cex = 0.8, ...)
@@ -238,7 +258,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
         sample_temp <- sample.Table[ ,c(2, 5)]
 
       # On behalf of Prof. Schellmann we remove all repeated 0-dose measurements
-      if (length(natural) != 1) {
+      if (!fit.repeated && length(natural) > 1) {
         sample_temp <- sample_temp[-c(natural[2:length(natural)]), ]
       }
 
@@ -257,14 +277,14 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
         cat("\n\n$$ y = a + b * x $$")
       }
 
-      fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
-                              algorithm = "LM", plot = FALSE, verbose = FALSE, ...))
+      fit <- out$fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
+                                         algorithm = "LM", plot = FALSE, verbose = FALSE, ...))
 
       # When EXP fitting fails revert to LIN fit
       if (inherits(fit, "try-error") && model == "EXP") {
         model <- "LIN"
-        fit <- ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
-                            algorithm = "LM", plot = FALSE, verbose = FALSE, ...)
+        fit <- out$fit <- ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
+                                       algorithm = "LM", plot = FALSE, verbose = FALSE, ...)
       }
 
       cat("\n\n**Equivalent dose (Gy)**:", fit$output$De, "+/-", fit$output$De.Error)
@@ -277,9 +297,9 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
       ### DRC (bootstrap) ----
       if (bootstrap) {
         .section(main_level, "Bootstrapped DRC", delim = delim)
-        fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
-                                algorithm = "LM", plot = FALSE, verbose = FALSE,
-                                bootstrap = TRUE, ...))
+        fit <- out$bootstrap.fit <- try(ESR::fit_DRC(sample_temp, model = model, fit.weights = fit.weights[i],
+                                                     algorithm = "LM", plot = FALSE, verbose = FALSE,
+                                                     bootstrap = TRUE, ...))
 
         cat("\n\n**Equivalent dose (Gy)**:", fit$output$De, "+/-", fit$output$De.Error)
         if (model == "EXP")
@@ -291,9 +311,9 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
 
       ### DE-DEmax plot ----
       .section(main_level, "$D_E-D_{E,max}$ plot", delim = delim)
-      demax_inverse <- ESR::calc_DePlateau(sample_temp, fit.weights = fit.weights[i], model = model,
-                                           output.console = FALSE, cex = 0.9, show.grid = TRUE,
-                                           line = 0, mar = c(5, 6, 4, 4) + 0.1, ...)
+      demax_inverse <- out$demax_inverse <- ESR::calc_DePlateau(sample_temp, fit.weights = fit.weights[i], model = model,
+                                                                output.console = FALSE, cex = 0.9, show.grid = TRUE,
+                                                                line = 0, mar = c(5, 6, 4, 4) + 0.1, ...)
 
       ### DE-DEmax numeric ----
       .section(main_level, "$D_E-D_{E,max}$ numeric results", delim = delim)
@@ -317,4 +337,6 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
   }
   par(mfrow = c(1, 1))
 
+  ## RETURN ----
+  invisible(out)
 }
