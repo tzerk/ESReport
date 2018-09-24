@@ -4,10 +4,11 @@
 \alias{report_DE}
 \title{Insert a Equivalent Dose Calculation Section}
 \usage{
-report_DE(files, title = "Equivalent dose estimation", title.suffix = "",
-  natural = c(1, 2), natural.comment, dose, meta = NULL, settings = NULL,
-  fit.repeated = FALSE, sample.weight = NULL, interval, th = 10,
-  model = "EXP", amplitudes = NULL, spike = NULL, bootstrap = TRUE,
+report_DE(files, title = "Equivalent dose estimation",
+  title.suffix = "", natural = c(1, 2), natural.comment, dose,
+  meta = NULL, settings = NULL, fit.repeated = FALSE,
+  sample.weight = NULL, interval, th = 10, model = "EXP",
+  amplitudes = NULL, spike = NULL, bootstrap = TRUE,
   delim = "\\\\newpage", ...)
 }
 \arguments{
@@ -80,6 +81,8 @@ for HTML and \code{"\\\\newpage"} for PDF reports.}
 }
 \value{
 Text output via \code{\link{cat}}.
+
+A [list] with all intermediate and final results useful for debugging.
 }
 \description{
 Insert a section on the calculation of the equivalent dose for a given set

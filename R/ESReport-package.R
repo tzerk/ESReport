@@ -11,6 +11,6 @@
 #'
 #' @importFrom graphics par plot points text
 #' @importFrom stats dist setNames
-#' @importFrom utils as.roman read.delim
+#' @importFrom utils as.roman read.delim menu
 #'
 NULL

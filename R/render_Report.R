@@ -33,6 +33,21 @@
 #' @export
 render_Report <- function(file, output_format = c("pdf_document", "html_document"), backup = TRUE, ...) {
 
+  ## ---- Check file and list options if empty
+  if (!missing(file) && !file.exists(file))
+    stop("File", file, "does not exist!", call. = FALSE)
+
+  if (missing(file)) {
+    files <- list.files(pattern = ".rmd$", ignore.case = TRUE, recursive = FALSE)
+
+    if (length(files) == 0)
+      stop("No .Rmd files found in this directory.", call. = FALSE)
+
+    if (length(files) >= 1) {
+      choice <- menu(files, "Which file should be rendered?")
+      file <- files[choice]
+    }
+  }
 
   ## ---- Archive old report first
   if (backup) {
