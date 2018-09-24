@@ -93,7 +93,7 @@ report_DE <- function(files, title = "Equivalent dose estimation", title.suffix 
 
   ## Read files to R
   spectra <- out$spectra <- ESR::read_Spectrum(files, verbose = FALSE, ...)
-  dose <- out$spectra <- as.numeric(unlist(read.delim(dose, header = FALSE)))
+  dose <- out$dose <- as.numeric(unlist(read.delim(dose, header = FALSE)))
 
   if (!is.null(sample.weight)) {
     if (is.character(sample.weight))
