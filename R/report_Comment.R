@@ -24,8 +24,10 @@
 #' @export
 report_Comment <- function(level = 1, text, delim) {
 
-  cat(paste0("\n\n", delim, "\n\n"),paste(rep("#", level), collapse = ""), "Comment\n\n",
+  cat(paste0("\n\n", delim, "\n\n"),paste(rep("#", level), collapse = ""), " Comment\n\n",
       text,
       "\n\n", sep = "")
 
 }
+.section <- function(level, text, delim)
+  cat(paste0("\n\n", delim,"\n\n"), paste(rep("#", level), collapse = ""), paste("", text), "\n\n", sep = "")
